@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ECF OMNI EDITOR v8.0</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0; 
+            --accent: #00e676; --accent-hover: #00c853; /* Verde Matrix */
+            --changed: #ff9100; --new: #00e676; --deleted: #f44336;
+            --input-bg: #2c2c2c; --border: #333;
+            --weapon: #ef5350; --food: #66bb6a; --block: #ffa726; 
+        }
+        body { font-family: 'Segoe UI', 'Roboto', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* --- SIDEBAR --- */
+        #sidebar { width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+        
+        .sidebar-header { padding: 15px; background: #232323; border-bottom: 1px solid var(--border); }
+        .app-title { margin: 0 0 15px 0; font-size: 1.1em; display:flex; align-items:center; justify-content: space-between; color:white; font-weight: bold; letter-spacing: 1px; }
+        .version-badge { font-size: 0.6em; background: #333; padding: 2px 6px; border-radius: 4px; color: #888; }
+        
+        /* Filtros */
+        .filter-bar { display: flex; gap: 4px; margin-bottom: 10px; }
+        .filter-btn { background: #333; border: none; border-radius: 4px; padding: 8px; cursor: pointer; color: #888; flex: 1; transition: 0.2s; }
+        .filter-btn:hover { background: #444; color: white; }
+        .filter-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(0,230,118,0.4); }
+        
+        .search-box { display: flex; background: var(--input-bg); padding: 8px; border-radius: 4px; border: 1px solid #444; margin-bottom: 10px; }
+        .search-box input { background: transparent; border: none; color: white; flex: 1; outline: none; }
+
+        /* Botonera Principal */
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8em; transition: 0.2s; }
+        .btn-load { background: #424242; }
+        .btn-save { background: var(--accent); color: black; }
+        .btn-save:hover { background: var(--accent-hover); }
+        .btn-view { background: #7b1fa2; grid-column: span 2; } /* EL BOTÓN DE CÓDIGO */
+        .btn-view:hover { background: #9c27b0; }
+
+        /* Lista */
+        #object-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        .list-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #2a2a2a; border-left: 3px solid transparent; transition: 0.1s; }
+        .list-item:hover { background: #2c2c2c; }
+        .list-item.active { background: #37474f; border-left-color: var(--accent); color: white; }
+        
+        /* Indicadores visuales en lista */
+        .cat-weapon { border-left-color: var(--weapon) !important; }
+        .cat-food { border-left-color: var(--food) !important; }
+        .cat-block { border-left-color: var(--block) !important; }
+        .is-new { background: rgba(0, 230, 118, 0.05); }
+
+        /* --- MAIN AREA --- */
+        #editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #181818; position: relative; }
+        
+        /* Dashboard */
+        #dashboard { 
+            padding: 20px 30px; background: #141414; border-bottom: 1px solid #333; 
+            display: none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 5;
+        }
+        .stat-card { background: #222; padding: 10px; border-radius: 6px; border: 1px solid #333; text-align: center; }
+        .stat-card label { font-size: 0.7em; text-transform: uppercase; color: #888; display: block; margin-bottom: 5px; }
+        .stat-card input { width: 100%; background: transparent; border: none; color: var(--accent); font-size: 1.2em; font-weight: bold; text-align: center; font-family: 'Consolas'; }
+        .stat-card input:focus { outline: none; border-bottom: 1px solid var(--accent); }
+
+        /* Scroll Propiedades */
+        #props-scroll { flex: 1; overflow-y: auto; padding: 20px 40px; }
+        .prop-row { display: flex; margin-bottom: 6px; align-items: center; font-family: 'Consolas', monospace; }
+        .prop-key { width: 220px; color: #90caf9; text-align: right; padding-right: 20px; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+        .prop-val { flex: 1; background: var(--input-bg); border: 1px solid #444; color: #ccc; padding: 6px 10px; font-family: inherit; font-size: 0.95em; border-radius: 4px; transition: 0.2s; }
+        .prop-val:focus { border-color: var(--accent); background: #333; outline: none; }
+        .prop-val.modified { border-color: var(--changed); color: var(--changed); background: rgba(255, 145, 0, 0.05); }
+
+        /* Footer Status */
+        #status-bar { background: var(--panel); padding: 5px 15px; font-size: 0.75em; color: #666; border-top: 1px solid #333; display: flex; justify-content: space-between; }
+
+        /* Botón Flotante (Clonar) */
+        .fab-clone { position: absolute; bottom: 40px; right: 40px; background: #2979ff; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 20px rgba(0,0,0,0.6); cursor: pointer; border: none; transition: 0.3s; z-index: 20; }
+        .fab-clone:hover { transform: scale(1.1) rotate(90deg); background: #448aff; }
+
+        /* --- VISOR DE CÓDIGO (MODAL) --- */
+        #code-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 200; display: none; flex-direction: column; }
+        .modal-header { padding: 15px 20px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
+        #code-view-container { flex: 1; overflow: auto; padding: 20px; font-family: 'Consolas', monospace; white-space: pre; color: #888; background: #121212; font-size: 0.9em; }
+        
+        .line-row { display: block; min-height: 1.2em; padding: 2px 0; }
+        .line-changed { background-color: rgba(255, 145, 0, 0.15); color: #ffb74d; border-left: 3px solid var(--changed); padding-left: 10px; }
+        .line-new { background-color: rgba(0, 230, 118, 0.15); color: #69f0ae; border-left: 3px solid var(--new); padding-left: 10px; }
+        .diff-info { font-size: 0.8em; color: #ff9100; opacity: 0.8; margin-left: 10px; font-style: italic; }
+
+        /* Modal Crear */
+        #creator-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: var(--panel); width: 400px; padding: 30px; border-radius: 8px; border: 1px solid #444; box-shadow: 0 10px 40px black; }
+        .modal-box select, .modal-box input { width: 100%; padding: 12px; margin-bottom: 20px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; box-sizing: border-box; }
+
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="sidebar-header">
+        <div class="app-title">
+            OMNI EDITOR <span class="version-badge">v8.0</span>
+        </div>
+        
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="setFilter('all')" title="Todo"><span class="material-icons">apps</span></button>
+            <button class="filter-btn" onclick="setFilter('weapon')" title="Armas"><span class="material-icons" style="color:var(--weapon)">gps_fixed</span></button>
+            <button class="filter-btn" onclick="setFilter('food')" title="Comida"><span class="material-icons" style="color:var(--food)">lunch_dining</span></button>
+            <button class="filter-btn" onclick="setFilter('block')" title="Bloques"><span class="material-icons" style="color:var(--block)">view_in_ar</span></button>
+        </div>
+
+        <div class="search-box">
+            <span class="material-icons" style="color:#666; font-size:1.2em">search</span>
+            <input type="text" id="searchInput" placeholder="Buscar..." onkeyup="applyFilters()">
+        </div>
+
+        <div class="action-grid">
+            <input type="file" id="fileInput" accept=".txt,.ecf" style="display:none">
+            <button class="btn btn-load" onclick="document.getElementById('fileInput').click()">
+                <span class="material-icons">folder</span> Cargar
+            </button>
+            <button class="btn btn-save" onclick="downloadConfig()">
+                <span class="material-icons">save</span> Guardar
+            </button>
+            <button class="btn btn-view" onclick="showCodeViewer()">
+                <span class="material-icons">visibility</span> Inspeccionar Código / Cambios
+            </button>
+        </div>
+        
+        <button class="btn" style="margin-top:10px; background:#333; width:100%" onclick="openCreatorModal()">
+            <span class="material-icons">add</span> Crear Nuevo (Desde Cero)
+        </button>
+    </div>
+    
+    <ul id="object-list"></ul>
+</div>
+
+<div id="editor-area">
+    <div id="dashboard"></div>
+    <div id="props-scroll">
+        <div style="text-align:center; margin-top: 150px; opacity: 0.2">
+            <span class="material-icons" style="font-size: 8em;">fingerprint</span>
+            <h1>Esperando Archivo...</h1>
+        </div>
+    </div>
+    
+    <button class="fab-clone" onclick="duplicateCurrentItem()" title="Clonar Ítem Actual">
+        <span class="material-icons">content_copy</span>
+    </button>
+
+    <div id="status-bar">
+        <span id="status-text">Listo</span>
+        <span id="changes-count">Modificados: 0</span>
+    </div>
+</div>
+
+<div id="code-modal">
+    <div class="modal-header">
+        <h3 style="margin:0; color:white; display:flex; gap:10px; align-items:center">
+            <span class="material-icons" style="color:var(--changed)">history_edu</span> 
+            Revisión de Cambios
+        </h3>
+        <button class="btn btn-load" onclick="document.getElementById('code-modal').style.display='none'">
+            <span class="material-icons">close</span> Cerrar
+        </button>
+    </div>
+    <div id="code-view-container"></div>
+</div>
+
+<div id="creator-modal">
+    <div class="modal-box">
+        <h2 style="color:white; margin-top:0">Crear Ítem</h2>
+        <label style="color:#aaa">Tipo:</label>
+        <select id="newType">
+            <option value="gun">🔫 Arma</option>
+            <option value="food">🍔 Comida</option>
+            <option value="block">📦 Bloque</option>
+        </select>
+        <label style="color:#aaa">Nombre:</label>
+        <input type="text" id="newName" placeholder="Ej: SuperItem">
+        <div style="text-align:right">
+            <button class="btn btn-load" style="display:inline-flex" onclick="document.getElementById('creator-modal').style.display='none'">Cancelar</button>
+            <button class="btn btn-save" style="display:inline-flex" onclick="confirmCreate()">Crear</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- DATOS GLOBALES ---
+let parsedNodes = [];
+let originalFileName = "config.ecf";
+let currentFilter = "all";
+let selectedNodeIndex = -1;
+let modifiedCount = 0;
+
+// Configuración Dashboard y Tooltips
+const PROPS_DB = {
+    'Damage': { l:'Daño', i:'🎯' }, 'BlastDamage': { l:'Explosión', i:'💥' },
+    'AmmoCapacity': { l:'Cargador', i:'🔋' }, 'ReloadDelay': { l:'Recarga (s)', i:'⏳' },
+    'Range': { l:'Rango', i:'📏' }, 'ROF': { l:'Cadencia', i:'⚡' },
+    'ZoomIn': { l:'Zoom', i:'🔭' }, 'Recoil': { l:'Retroceso', i:'👋' },
+    'FoodDecayTime': { l:'Caducidad', i:'🧟' }, 'Nutrition': { l:'Nutrición', i:'🍗' },
+    'Mass': { l:'Masa (Kg)', i:'⚖️' }, 'Volume': { l:'Volumen', i:'📦' },
+    'HitPoints': { l:'Vida (HP)', i:'❤️' }, 'EnergyIn': { l:'Consumo', i:'🔌' }
+};
+
+// --- CORE ---
+document.getElementById('fileInput').addEventListener('change', (e) => loadFile(e.target.files[0]));
+
+function loadFile(file) {
+    if (!file) return;
+    originalFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        parsedNodes = parseECF(e.target.result);
+        applyFilters();
+        updateStatus("Archivo cargado: " + file.name);
+    };
+    reader.readAsText(file);
+}
+
+function parseECF(text) {
+    const lines = text.split(/\r?\n/);
+    const nodes = [];
+    let currentBlockLines = [];
+    let depth = 0;
+    let insideBlock = false;
+
+    for (let line of lines) {
+        const open = (line.match(/\{/g) || []).length;
+        const close = (line.match(/\}/g) || []).length;
+
+        if (!insideBlock) {
+            if (open > 0) {
+                insideBlock = true;
+                depth += (open - close);
+                currentBlockLines.push(line);
+            } else nodes.push({ type: 'raw', content: line });
+        } else {
+            currentBlockLines.push(line);
+            depth += (open - close);
+            if (depth <= 0) {
+                nodes.push(parseBlock(currentBlockLines));
+                currentBlockLines = [];
+                insideBlock = false;
+                depth = 0;
+            }
+        }
+    }
+    return nodes;
+}
+
+function parseBlock(lines) {
+    const fullText = lines.join('\n');
+    const headerRegex = /\{\s*(\+|Item|Block|Material|Template)?\s*([a-zA-Z0-9]+)?.*?Id:\s*(\d+).*?Name:\s*([\w]+)/i;
+    const altHeaderRegex = /\{\s*(Material|Template|Item|Block).*?Name:\s*([\w]+)/i;
+
+    let meta = { id: '', name: 'Unnamed', type: 'Object', category: 'misc' };
+    let match = fullText.match(headerRegex);
+    
+    if (match) {
+        meta.type = match[2] || match[1] || 'Object';
+        meta.id = match[3];
+        meta.name = match[4];
+    } else {
+        match = fullText.match(altHeaderRegex);
+        if(match) { meta.type = match[1] || 'Def'; meta.name = match[2]; }
+    }
+
+    // Auto-Cat
+    if (meta.type.includes("Block")) meta.category = "block";
+    else if (fullText.includes("Damage:") || fullText.includes("AmmoCapacity:")) meta.category = "weapon";
+    else if (fullText.includes("FoodDecayTime") || fullText.includes("Nutrition")) meta.category = "food";
+
+    return { type: 'block', meta: meta, lines: lines, parsedProps: extractProperties(lines), isNew: false, isModified: false };
+}
+
+function extractProperties(lines) {
+    let props = [];
+    let depth = 0;
+    lines.forEach((line, index) => {
+        const open = (line.match(/\{/g) || []).length;
+        const close = (line.match(/\}/g) || []).length;
+        const propMatch = line.match(/^(\s*)([^:{}\/#]+):(\s*)([^#\r\n]+)(#.*)?$/);
+        
+        if (propMatch && depth >= 1) { 
+            const val = propMatch[4].trimEnd();
+            props.push({
+                index: index,
+                indent: propMatch[1],
+                key: propMatch[2].trim(),
+                separator: propMatch[3],
+                value: val,
+                originalValue: val,
+                comment: propMatch[5] || '',
+                isChild: depth > 1
+            });
+        }
+        depth += (open - close);
+    });
+    return props;
+}
+
+// --- FILTROS ---
+function setFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    // Simple logic for active button
+    if(filter==='all') document.querySelectorAll('.filter-btn')[0].classList.add('active');
+    if(filter==='weapon') document.querySelectorAll('.filter-btn')[1].classList.add('active');
+    if(filter==='food') document.querySelectorAll('.filter-btn')[2].classList.add('active');
+    if(filter==='block') document.querySelectorAll('.filter-btn')[3].classList.add('active');
+    applyFilters();
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const list = document.getElementById('object-list');
+    list.innerHTML = '';
+
+    parsedNodes.forEach((node, index) => {
+        if (node.type === 'block') {
+            let pass = true;
+            if (currentFilter !== 'all' && node.meta.category !== currentFilter) pass = false;
+            if (search && !node.meta.name.toLowerCase().includes(search) && !node.meta.id.includes(search)) pass = false;
+
+            if (pass) {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                if (node.meta.category === 'weapon') li.classList.add('cat-weapon');
+                if (node.meta.category === 'food') li.classList.add('cat-food');
+                if (node.meta.category === 'block') li.classList.add('cat-block');
+                if (node.isNew) li.classList.add('is-new');
+
+                li.innerHTML = `<div>${node.meta.name}</div><div style="font-size:0.7em;opacity:0.5">${node.meta.type} #${node.meta.id}</div>`;
+                li.onclick = () => loadEditor(index);
+                list.appendChild(li);
+            }
+        }
+    });
+}
+
+// --- EDITOR ---
+function loadEditor(index) {
+    selectedNodeIndex = index;
+    const node = parsedNodes[index];
+    const scroll = document.getElementById('props-scroll');
+    const dashboard = document.getElementById('dashboard');
+    
+    document.querySelectorAll('.list-item').forEach(i => i.classList.remove('active'));
+    // (Active highlight simplified)
+
+    scroll.innerHTML = `<h2 style="color:white; border-bottom:1px solid #333; padding-bottom:10px">${node.meta.name}</h2>`;
+    
+    // Dashboard
+    dashboard.innerHTML = '';
+    let hasStats = false;
+    node.parsedProps.forEach(prop => {
+        if(PROPS_DB[prop.key]) {
+            hasStats = true;
+            const card = document.createElement('div');
+            card.className = 'stat-card';
+            card.innerHTML = `<label>${PROPS_DB[prop.key].i} ${PROPS_DB[prop.key].l}</label><input type="text" value="${prop.value}">`;
+            card.querySelector('input').addEventListener('input', (e) => updateValue(node, prop, e.target.value));
+            dashboard.appendChild(card);
+        }
+    });
+    dashboard.style.display = hasStats ? 'grid' : 'none';
+
+    // List
+    node.parsedProps.forEach(prop => {
+        const row = document.createElement('div');
+        row.className = 'prop-row';
+        if(prop.isChild) row.style.paddingLeft = "25px";
+        
+        const label = document.createElement('div');
+        label.className = 'prop-key';
+        label.innerText = prop.key;
+        label.title = PROPS_DB[prop.key] ? PROPS_DB[prop.key].l : prop.key; // Tooltip básico
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'prop-val';
+        input.value = prop.value;
+        input.id = `input-${prop.index}`;
+        if(prop.value !== prop.originalValue) input.classList.add('modified');
+
+        input.oninput = (e) => updateValue(node, prop, e.target.value);
+        row.appendChild(label);
+        row.appendChild(input);
+        scroll.appendChild(row);
+    });
+}
+
+function updateValue(node, prop, val) {
+    prop.value = val;
+    node.lines[prop.index] = `${prop.indent}${prop.key}:${prop.separator}${prop.value}${prop.comment}`;
+    
+    // Check modification
+    const el = document.getElementById(`input-${prop.index}`);
+    if(prop.value !== prop.originalValue) {
+        if(el) el.classList.add('modified');
+        if(!node.isModified) { node.isModified = true; modifiedCount++; }
+    } else {
+        if(el) el.classList.remove('modified');
+        // Simple logic doesn't decrement count perfectly but works for visuals
+    }
+    updateStatus();
+}
+
+// --- VISOR DE CÓDIGO (EL RETURN) ---
+function showCodeViewer() {
+    const container = document.getElementById('code-view-container');
+    container.innerHTML = '';
+    
+    parsedNodes.forEach(node => {
+        if(node.type === 'raw') {
+            const div = document.createElement('div');
+            div.className = 'line-row';
+            div.textContent = node.content;
+            container.appendChild(div);
+        } else {
+            // Block analysis
+            node.lines.forEach((line, idx) => {
+                const div = document.createElement('div');
+                div.className = 'line-row';
+                div.textContent = line;
+                
+                // Highlight Logic
+                if (node.isNew) {
+                    div.classList.add('line-new');
+                } else {
+                    const propChanged = node.parsedProps.find(p => p.index === idx && p.value !== p.originalValue);
+                    if (propChanged) {
+                        div.classList.add('line-changed');
+                        const info = document.createElement('span');
+                        info.className = 'diff-info';
+                        info.textContent = `// Antes: ${propChanged.originalValue}`;
+                        div.appendChild(info);
+                    }
+                }
+                container.appendChild(div);
+            });
+        }
+    });
+    
+    document.getElementById('code-modal').style.display = 'flex';
+}
+
+// --- UTILIDADES ---
+function duplicateCurrentItem() {
+    if(selectedNodeIndex === -1) return;
+    const src = parsedNodes[selectedNodeIndex];
+    let maxId = 1000;
+    parsedNodes.forEach(n => { if(n.meta && n.meta.id) maxId = Math.max(maxId, parseInt(n.meta.id)||0); });
+    
+    let text = src.lines.join('\n');
+    text = text.replace(/Id:\s*\d+/, `Id: ${maxId + 1}`);
+    text = text.replace(/Name:\s*([\w]+)/, `Name: $1_Copy`);
+    
+    addNode(text);
+    updateStatus("Ítem clonado con éxito");
+}
+
+function confirmCreate() {
+    const type = document.getElementById('newType').value;
+    const name = document.getElementById('newName').value || "NewItem";
+    let maxId = 1000;
+    parsedNodes.forEach(n => { if(n.meta && n.meta.id) maxId = Math.max(maxId, parseInt(n.meta.id)||0); });
+    
+    let tpl = `{ +Item Id: ${maxId+1}, Name: ${name}\n  Mass: 1, type: float, display: true\n}`;
+    if(type === 'gun') tpl = `{ +Item Id: ${maxId+1}, Name: ${name}\n  Material: metalweapon\n  { Child 0\n    Class: Ranged\n    Damage: 50, display: true\n  }\n}`;
+    
+    addNode(tpl);
+    document.getElementById('creator-modal').style.display = 'none';
+}
+
+function addNode(text) {
+    const lines = text.split('\n');
+    const newNode = parseBlock(lines);
+    newNode.isNew = true; // Mark for Green Highlight
+    parsedNodes.push({type:'raw', content:'\n'}, newNode);
+    applyFilters();
+    // Auto select last
+    setTimeout(() => loadEditor(parsedNodes.length - 1), 100);
+}
+
+function updateStatus(msg) {
+    if(msg) document.getElementById('status-text').innerText = msg;
+    document.getElementById('changes-count').innerText = "Items modificados (aprox): " + modifiedCount;
+}
+
+function downloadConfig() {
+    let content = "";
+    parsedNodes.forEach(n => content += (n.type === 'raw' ? n.content : n.lines.join('\n')) + "\n");
+    const blob = new Blob([content], {type: "text/plain"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "EDITADO_" + originalFileName;
+    a.click();
+}
+</script>
+</body>
+</html>
