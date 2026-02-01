@@ -1,6 +1,4 @@
-<img width="1280" height="568" alt="image" src="https://github.com/user-attachments/assets/c58e09e5-86fd-437f-a7dd-4963a7b75e25" />
-
-<img width="1280" height="566" alt="image" src="https://github.com/user-attachments/assets/8ba35e55-0f18-487d-922d-2c5ef4f6e6b8" />
+<img width="1280" height="568" alt="image" src="https://github.com/user-attachments/assets/25b8be0a-db1b-4c68-8e26-ffb781394a30" />
 
 ECF Omni Editor: The Ultimate Web-Based Config Editor (No Install)
 
@@ -40,9 +38,7 @@ Click Inspect Code to review your changes.
 Click Save to download your new, error-free file.
 
 ESPAÑOL
-<img width="1280" height="568" alt="image" src="https://github.com/user-attachments/assets/91c0ce5a-5b9f-4dee-a397-bbfd746382b4" />
-
-<img width="1280" height="566" alt="image" src="https://github.com/user-attachments/assets/8d6ba562-a09a-4523-91fc-411e1fae3eb8" />
+<img width="1280" height="568" alt="image" src="https://github.com/user-attachments/assets/25b8be0a-db1b-4c68-8e26-ffb781394a30" />
 
 El ECF Omni Editor es una herramienta web potente, segura y gratuita diseñada para facilitar el modding en Empyrion. Ya sea que quieras ajustar el daño de un arma, crear nueva comida o rebalancear bloques, esta herramienta te ofrece un panel visual para hacerlo sin errores de sintaxis.
 
